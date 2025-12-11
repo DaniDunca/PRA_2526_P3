@@ -1,3 +1,4 @@
+
 #ifndef HASHTABLE_H
 #define HASHTABLE_H
 
@@ -6,18 +7,18 @@
 #include <string>
 #include "Dict.h"
 #include "TableEntry.h"
-
-#include "../PRA_25246_P1/ListLinked.h"
+#include "ListLinked.h"
 
 template <typename V>
 class HashTable: public Dict<V> {
 private:
     int n;    
     int max;  
-
+    
     ListLinked<TableEntry<V>>** table;
 
-        int h(const std::string& key) const {
+    
+    int h(const std::string& key) const {
         long sum = 0;
         for (unsigned char c : key) {
             sum += static_cast<int>(c);
@@ -25,8 +26,22 @@ private:
         return (max == 0) ? 0 : static_cast<int>(sum % max);
     }
 
+    
+    int findPosInBucket(int bucketIndex, const std::string& key) const {
+        const auto* lst = table[bucketIndex];        
+        int sz = lst->size();                      
+        for (int i = 0; i < sz; ++i) {
+            const TableEntry<V>& te = lst->get(i);   
+            if (te.key == key) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
 public:
-       explicit HashTable(int size)
+    
+    explicit HashTable(int size)
         : n(0), max(size), table(nullptr) {
         if (size <= 0) {
             throw std::runtime_error("El tamaño de la tabla debe ser positivo.");
@@ -38,7 +53,7 @@ public:
         }
     }
 
-   
+    
     ~HashTable() {
         if (table) {
             for (int i = 0; i < max; ++i) {
@@ -48,57 +63,54 @@ public:
         }
     }
 
-   
-
-        void insert(const std::string& key, const V& value) override {
+    
+    void insert(const std::string& key, const V& value) override {
         int b = h(key);
-        TableEntry<V> te(key, value);
-
-                int pos = table[b]->search(te);
+        int pos = findPosInBucket(b, key);
         if (pos != -1) {
             throw std::runtime_error("La clave ya existe: " + key);
         }
-
-               table[b]->insert(0, te);
+        
+        table[b]->insert(0, TableEntry<V>(key, value));
         ++n;
     }
 
-        V search(const std::string& key) const override {
+   
+    V search(const std::string& key) const override {
         int b = h(key);
-        TableEntry<V> probe(key);  // entrada ficticia con la clave
-        int pos = table[b]->search(probe);
+        int pos = findPosInBucket(b, key);
         if (pos == -1) {
             throw std::runtime_error("Clave no encontrada: " + key);
         }
         return table[b]->get(pos).value;
     }
 
-        V remove(const std::string& key) override {
+   
+    V remove(const std::string& key) override {
         int b = h(key);
-        TableEntry<V> probe(key);
-        int pos = table[b]->search(probe);
+        int pos = findPosInBucket(b, key);
         if (pos == -1) {
             throw std::runtime_error("Clave no encontrada: " + key);
         }
-              V val = table[b]->get(pos).value;
-        table[b]->remove(pos);
+        
+        TableEntry<V> removed = table[b]->remove(pos);
         --n;
-        return val;
+        return removed.value;
     }
 
-   
+  
     int entries() const override {
         return n;
     }
 
-    // --- Métodos propios ---
+
 
    
     int capacity() const {
         return max;
     }
 
-
+    
     V operator[](const std::string& key) const {
         return search(key);
     }
@@ -110,7 +122,7 @@ public:
             out << "[" << i << "]: ";
             int sz = th.table[i]->size();
             for (int j = 0; j < sz; ++j) {
-                out << th.table[i]->get(j);
+                out << th.table[i]->get(j);  
                 if (j + 1 < sz) out << " | ";
             }
             out << "\n";
@@ -119,4 +131,5 @@ public:
     }
 };
 
-#endif
+#endif 
+
