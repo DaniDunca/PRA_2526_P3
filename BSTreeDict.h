@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "Dict.h"
+#include "DIct.h"      // mantenemos el nombre tal cual en tu repo
 #include "BSTree.h"
 #include "TableEntry.h"
 
@@ -32,7 +32,7 @@ public:
         : tree(new BSTree<TableEntry<V>>()) {}
 
     // Destructor: libera el ABB
-    ~BSTreeDict() override {
+    ~BSTreeDict() {
         delete tree;
         tree = nullptr;
     }
@@ -42,21 +42,17 @@ public:
         return tree->size();
     }
 
-    // Inserta o actualiza el valor asociado a 'key'
+    // Inserta (key, value).
+    // Si la clave ya existe, debe lanzar std::runtime_error (el test lo exige).
     void insert(const std::string& key, const V& value) override {
-        TableEntry<V> entry(key, value);
-
-        // Si existe la clave, eliminamos y reinsertamos con el nuevo valor
-        // (BSTree::search devuelve copia, no podemos modificar in situ).
+        // Si search no lanza, la clave existe -> lanzar.
         try {
-            (void)tree->search(makeProbe(key)); // prueba de existencia
-            tree->remove(makeProbe(key));       // eliminación por clave
-            // no es necesario gestionar contador: BSTree lo hace internamente
+            (void) tree->search(makeProbe(key));
+            throw std::runtime_error("Clave duplicada: " + key);
         } catch (const std::runtime_error&) {
-            // no existe -> seguimos a la inserción directa
+            // No existe: insertamos.
         }
-
-        tree->insert(entry);
+        tree->insert(TableEntry<V>(key, value));
     }
 
     // Busca 'key' y devuelve el valor; lanza si no existe
@@ -71,14 +67,12 @@ public:
 
     // Elimina la entrada con 'key' y devuelve el valor eliminado; lanza si no existe
     V remove(const std::string& key) override {
-        // Necesitamos el valor antes de eliminar
-        TableEntry<V> e;
+        TableEntry<V> e;  // requiere ctor por defecto en TableEntry
         try {
             e = tree->search(makeProbe(key));
         } catch (const std::runtime_error&) {
             throw std::runtime_error("No se puede eliminar: clave no encontrada: " + key);
         }
-
         tree->remove(makeProbe(key));
         return e.getValue();
     }
@@ -98,4 +92,3 @@ public:
 };
 
 #endif
-
